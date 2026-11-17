@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Produção" />
+  <title>Cronômetro de Produção</title>
+  <style>
+    :root {
+      --bg: #111311;
+      --surface: #222522;
+      --surface-hover: #2d312d;
+      --green: #22c55e;
+      --amber: #f59e0b;
+      --red: #ef4444;
+      --text: #f3f4f6;
+      --muted: #8e928e;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: calc(env(safe-area-inset-top) + 16px) 20px calc(env(safe-area-inset-bottom) + 20px);
+      max-width: 480px;
+      margin: 0 auto;
+      user-select: none;
+    }
+
+    /* Topo */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .title {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .icon-btn {
+      background: var(--surface);
+      border: 1px solid #303430;
+      color: var(--text);
+      padding: 8px 12px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .icon-btn.active {
+      border-color: var(--green);
+      color: var(--green);
+    }
+
+    /* Display Central */
+    .display-area {
+      text-align: center;
+      margin: 18px 0;
+    }
+
+    .timer {
+      font-size: 74px;
+      font-weight: 800;
+      letter-spacing: -2px;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+      transition: color 0.2s;
+      color: var(--text);
+    }
+
+    .timer.overtime {
+      color: var(--red);
+    }
+
+    .timer.paused {
+      opacity: 0.75;
+    }
+
+    .timer-label {
+      font-size: 14px;
+      color: var(--muted);
+      margin-top: 6px;
+      font-weight: 500;
+    }
+
+    .pieces-box {
+      margin-top: 22px;
+    }
+
+    .pieces-count {
+      font-size: 36px;
+      font-weight: 800;
+      color: var(--green);
+      line-height: 1.1;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .pieces-label {
+      font-size: 14px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    /* Controles */
+    .controls-section {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .rates-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+
+    .rate-btn {
+      background: var(--surface);
+      border: 2px solid transparent;
+      color: var(--text);
+      font-size: 17px;
+      font-weight: 700;
+      padding: 15px 0;
+      border-radius: 14px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .rate-btn.selected {
+      background: #143620;
+      border-color: var(--green);
+      color: var(--green);
+    }
+
+    .input-row {
+      display: flex;
+      gap: 10px;
+    }
+
+    input[type="number"], input[type="text"] {
+      flex: 1;
+      background: var(--surface);
+      border: 2px solid transparent;
+      border-radius: 14px;
+      padding: 15px 16px;
+      font-size: 17px;
+      color: var(--text);
+      outline: none;
+      width: 100%;
+    }
+
+    /* Remove setinhas do input number no Safari/Chrome */
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+
+    input:focus {
+      border-color: #454a45;
+    }
+
+    .btn-use {
+      background: var(--surface);
+      border: none;
+      color: var(--text);
+      font-weight: 700;
+      font-size: 16px;
+      padding: 0 22px;
+      border-radius: 14px;
+      cursor: pointer;
+    }
+
+    .btn-use:active {
+      background: var(--surface-hover);
+    }
+
+    .btn-add {
+      background: var(--green);
+      border: none;
+      color: #06210e;
+      font-weight: 800;
+      font-size: 16px;
+      padding: 0 22px;
+      border-radius: 14px;
+      cursor: pointer;
+    }
+
+    .btn-add:active {
+      opacity: 0.85;
+    }
+
+    .bottom-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 6px;
+    }
+
+    .btn-main {
+      border: none;
+      padding: 17px;
+      border-radius: 14px;
+      font-size: 17px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .btn-toggle {
+      background: var(--amber);
+      color: #1c1302;
+    }
+
+    .btn-toggle.running {
+      background: #333733;
+      color: var(--amber);
+    }
+
+    .btn-reset {
+      background: var(--surface);
+      color: #d1d5db;
+    }
+
+    /* Modal Histórico */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.82);
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+      z-index: 50;
+    }
+
+    .modal-backdrop.open {
+      display: flex;
+    }
+
+    .modal-sheet {
+      background: #1a1d1a;
+      width: 100%;
+      max-width: 480px;
+      max-height: 78dvh;
+      border-radius: 24px 24px 0 0;
+      padding: 22px 20px calc(env(safe-area-inset-bottom) + 20px);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #2c302c;
+    }
+
+    .modal-title {
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .btn-close {
+      background: var(--surface);
+      border: none;
+      color: var(--text);
+      padding: 8px 14px;
+      border-radius: 10px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .history-list {
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .history-item {
+      background: var(--surface);
+      padding: 14px 16px;
+      border-radius: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .history-left strong {
+      font-size: 16px;
+      display: block;
+    }
+
+    .history-left span {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .history-right {
+      text-align: right;
+    }
+
+    .history-right .added-time {
+      color: var(--green);
+      font-weight: 700;
+      font-size: 15px;
+    }
+
+    .history-right .rate-tag {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .empty-history {
+      text-align: center;
+      color: var(--muted);
+      padding: 36px 0;
+      font-size: 15px;
+    }
+
+    /* Confirm Reset */
+    .confirm-bar {
+      display: none;
+      background: #2b1414;
+      border: 1px solid #7f1d1d;
+      padding: 12px 14px;
+      border-radius: 14px;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .confirm-bar.show {
+      display: flex;
+    }
+
+    .confirm-bar span {
+      font-size: 13px;
+      color: #fca5a5;
+      font-weight: 600;
+    }
+
+    .confirm-btns {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn-confirm-yes {
+      background: var(--red);
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 13px;
+    }
+
+    .btn-confirm-no {
+      background: var(--surface);
+      color: var(--text);
+      border: none;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="title">Cronômetro de Produção</div>
+    <div class="header-actions">
+      <button class="icon-btn" id="wakeBtn" onclick="toggleWakeLock()">Tela</button>
+      <button class="icon-btn" onclick="openHistory()">Lotes</button>
+    </div>
+  </div>
+
+  <div class="display-area">
+    <div class="timer paused" id="timerDisplay">00:00</div>
+    <div class="timer-label" id="timerLabel">aguardando lote</div>
+
+    <div class="pieces-box">
+      <div class="pieces-count" id="totalPiecesDisplay">0</div>
+      <div class="pieces-label">peças no total</div>
+    </div>
+  </div>
+
+  <div class="controls-section">
+    <div class="rates-grid" id="ratesGrid">
+      <button class="rate-btn selected" data-rate="2.5" onclick="selectPresetRate(2.5)">2,5</button>
+      <button class="rate-btn" data-rate="3.0" onclick="selectPresetRate(3.0)">3,0</button>
+      <button class="rate-btn" data-rate="3.5" onclick="selectPresetRate(3.5)">3,5</button>
+      <button class="rate-btn" data-rate="4.0" onclick="selectPresetRate(4.0)">4,0</button>
+    </div>
+
+    <div class="input-row">
+      <input type="text" inputmode="decimal" id="customRateInput" />
+      <button class="btn-use" onclick="applyCustomRate()">Usar</button>
+    </div>
+
+    <div class="input-row">
+      <input type="number" inputmode="numeric" id="piecesInput" onkeydown="if(event.key==='Enter') addBatch()" />
+      <button class="btn-add" onclick="addBatch()">Adicionar</button>
+    </div>
+
+    <div class="confirm-bar" id="confirmResetBar">
+      <span>Zerar todo o dia e histórico?</span>
+      <div class="confirm-btns">
+        <button class="btn-confirm-no" onclick="cancelReset()">Não</button>
+        <button class="btn-confirm-yes" onclick="confirmReset()">Sim, zerar</button>
+      </div>
+    </div>
+
+    <div class="bottom-actions" id="bottomActions">
+      <button class="btn-main btn-toggle" id="toggleBtn" onclick="toggleTimer()">Iniciar</button>
+      <button class="btn-main btn-reset" onclick="askReset()">Zerar dia</button>
+    </div>
+  </div>
+
+  <!-- Modal Histórico do Dia -->
+  <div class="modal-backdrop" id="historyModal" onclick="if(event.target===this) closeHistory()">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <div class="modal-title">Lotes do Expediente</div>
+        <button class="btn-close" onclick="closeHistory()">Fechar</button>
+      </div>
+      <div class="history-list" id="historyList"></div>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = 'prod_timer_state_v3';
+
+    let state = {
+      selectedRate: 2.5,
+      totalPieces: 0,
+      isRunning: false,
+      targetEndTime: null,
+      pausedRemainingMs: 0,
+      batches: []
+    };
+
+    let wakeLock = null;
+    let tickInterval = null;
+
+    function loadState() {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          state = { ...state, ...JSON.parse(saved) };
+        }
+      } catch (e) {}
+      syncRateUI();
+      render();
+      if (state.isRunning) {
+        startLoop();
+      }
+    }
+
+    function saveState() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      } catch (e) {}
+    }
+
+    function getRemainingMs() {
+      if (state.isRunning && state.targetEndTime !== null) {
+        return state.targetEndTime - Date.now();
+      }
+      return state.pausedRemainingMs;
+    }
+
+    function formatMs(ms) {
+      const isNeg = ms < 0;
+      const absSeconds = Math.floor(Math.abs(ms) / 1000);
+      const mins = Math.floor(absSeconds / 60);
+      const secs = absSeconds % 60;
+      const formatted = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+      return isNeg ? `-${formatted}` : formatted;
+    }
+
+    function formatDurationBrief(totalSecs) {
+      const m = Math.floor(totalSecs / 60);
+      const s = Math.round(totalSecs % 60);
+      if (m === 0) return `${s}s`;
+      if (s === 0) return `${m} min`;
+      return `${m}m ${s}s`;
+    }
+
+    function selectPresetRate(rate) {
+      state.selectedRate = rate;
+      document.getElementById('customRateInput').value = '';
+      syncRateUI();
+      saveState();
+    }
+
+    function applyCustomRate() {
+      const raw = document.getElementById('customRateInput').value.replace(',', '.').trim();
+      const val = parseFloat(raw);
+      if (!val || val <= 0) return;
+      state.selectedRate = val;
+      syncRateUI();
+      saveState();
+    }
+
+    function syncRateUI() {
+      const buttons = document.querySelectorAll('.rate-btn');
+      let matchedPreset = false;
+      buttons.forEach(btn => {
+        const r = parseFloat(btn.dataset.rate);
+        if (Math.abs(r - state.selectedRate) < 0.001) {
+          btn.classList.add('selected');
+          matchedPreset = true;
+        } else {
+          btn.classList.remove('selected');
+        }
+      });
+
+      const rateFormatted = String(state.selectedRate).replace('.', ',');
+      if (!matchedPreset) {
+        document.getElementById('customRateInput').value = rateFormatted;
+      }
+    }
+
+    function addBatch() {
+      const input = document.getElementById('piecesInput');
+      const pieces = parseInt(input.value, 10);
+      if (!pieces || pieces <= 0) return;
+
+      const rate = state.selectedRate;
+      const addedSeconds = Math.round((pieces / rate) * 60);
+      const addedMs = addedSeconds * 1000;
+
+      if (state.isRunning && state.targetEndTime !== null) {
+        state.targetEndTime += addedMs;
+      } else {
+        state.pausedRemainingMs += addedMs;
+        state.isRunning = true;
+        state.targetEndTime = Date.now() + state.pausedRemainingMs;
+        startLoop();
+      }
+
+      const now = new Date();
+      const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+      state.totalPieces += pieces;
+      state.batches.unshift({
+        id: Date.now(),
+        timeStr,
+        pieces,
+        rate,
+        addedSeconds
+      });
+
+      input.value = '';
+      input.blur();
+      saveState();
+      render();
+    }
+
+    function toggleTimer() {
+      if (state.isRunning) {
+        state.pausedRemainingMs = getRemainingMs();
+        state.isRunning = false;
+        state.targetEndTime = null;
+        stopLoop();
+      } else {
+        state.isRunning = true;
+        state.targetEndTime = Date.now() + state.pausedRemainingMs;
+        startLoop();
+      }
+      saveState();
+      render();
+    }
+
+    function startLoop() {
+      if (tickInterval) clearInterval(tickInterval);
+      tickInterval = setInterval(render, 250);
+    }
+
+    function stopLoop() {
+      if (tickInterval) {
+        clearInterval(tickInterval);
+        tickInterval = null;
+      }
+    }
+
+    function askReset() {
+      document.getElementById('bottomActions').style.display = 'none';
+      document.getElementById('confirmResetBar').classList.add('show');
+    }
+
+    function cancelReset() {
+      document.getElementById('confirmResetBar').classList.remove('show');
+      document.getElementById('bottomActions').style.display = 'grid';
+    }
+
+    function confirmReset() {
+      stopLoop();
+      state.totalPieces = 0;
+      state.isRunning = false;
+      state.targetEndTime = null;
+      state.pausedRemainingMs = 0;
+      state.batches = [];
+      cancelReset();
+      saveState();
+      render();
+    }
+
+    function render() {
+      const remMs = getRemainingMs();
+      const timerEl = document.getElementById('timerDisplay');
+      const labelEl = document.getElementById('timerLabel');
+      const toggleBtn = document.getElementById('toggleBtn');
+
+      timerEl.textContent = formatMs(remMs);
+      document.getElementById('totalPiecesDisplay').textContent = state.totalPieces;
+
+      const isOvertime = remMs < 0;
+      timerEl.classList.toggle('overtime', isOvertime);
+      timerEl.classList.toggle('paused', !state.isRunning);
+
+      if (state.totalPieces === 0 && !state.isRunning && remMs === 0) {
+        labelEl.textContent = 'aguardando lote';
+      } else if (isOvertime) {
+        labelEl.textContent = 'tempo estourado (devendo)';
+      } else if (!state.isRunning) {
+        labelEl.textContent = 'pausado';
+      } else {
+        labelEl.textContent = 'tempo restante';
+      }
+
+      if (state.isRunning) {
+        toggleBtn.textContent = 'Pausar';
+        toggleBtn.classList.add('running');
+      } else {
+        toggleBtn.textContent = state.totalPieces > 0 || remMs !== 0 ? 'Continuar' : 'Iniciar';
+        toggleBtn.classList.remove('running');
+      }
+    }
+
+    function openHistory() {
+      const list = document.getElementById('historyList');
+      if (state.batches.length === 0) {
+        list.innerHTML = '<div class="empty-history">Nenhum lote adicionado hoje.</div>';
+      } else {
+        list.innerHTML = state.batches.map((b, idx) => {
+          const lotNum = state.batches.length - idx;
+          const rateFmt = String(b.rate).replace('.', ',');
+          return `
+            <div class="history-item">
+              <div class="history-left">
+                <strong>Lote #${lotNum} — ${b.pieces} peças</strong>
+                <span>Adicionado às ${b.timeStr}</span>
+              </div>
+              <div class="history-right">
+                <div class="added-time">+${formatDurationBrief(b.addedSeconds)}</div>
+                <div class="rate-tag">taxa ${rateFmt}/min</div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+      document.getElementById('historyModal').classList.add('open');
+    }
+
+    function closeHistory() {
+      document.getElementById('historyModal').classList.remove('open');
+    }
+
+    async function toggleWakeLock() {
+      const btn = document.getElementById('wakeBtn');
+      if (!('wakeLock' in navigator)) {
+        alert('Seu navegador não suporta bloqueio de tela automático.');
+        return;
+      }
+      if (wakeLock !== null) {
+        await wakeLock.release();
+        wakeLock = null;
+        btn.classList.remove('active');
+        btn.textContent = 'Tela';
+      } else {
+        try {
+          wakeLock = await navigator.wakeLock.request('screen');
+          btn.classList.add('active');
+          btn.textContent = 'Tela On';
+          wakeLock.addEventListener('release', () => {
+            wakeLock = null;
+            btn.classList.remove('active');
+            btn.textContent = 'Tela';
+          });
+        } catch (err) {}
+      }
+    }
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        render();
+      }
+    });
+
+    loadState();
+  </script>
+</body>
+</html>
